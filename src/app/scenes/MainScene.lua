@@ -1,5 +1,6 @@
 local HeroPlane=require("app.entities.HeroPlane")
 local Bullet=require("app.entities.Bullet")
+local Enemy=require("app.entities.Enemy")
 
 local MainScene = class("MainScene", function()
     return display.newScene("MainScene")
@@ -7,11 +8,20 @@ end)
 
 function MainScene:ctor()
 	-- bg
-	self.bgSp=cc.Sprite:createWithSpriteFrameName("background.png")
+	self.bgLayer=display.newLayer()
+	self.bgLayer:setAnchorPoint(0.5,0)
+	self.bgLayer:setPosition(display.cx,0)
+	self:addChild(self.bgLayer,0)
 
-	self.bgSp:setAnchorPoint(0.5,0)
-	self.bgSp:setPosition(display.cx,0)
-	self:addChild(self.bgSp,0)
+	self.bgSp1=display.newSprite("#background.png")
+	self.bgSp1:setAnchorPoint(0.5,0)
+	self.bgSp1:setPosition(display.cx,0)
+	self:addChild(self.bgSp1,1)
+
+	self.bgSp2=display.newSprite("#background.png")
+	self.bgSp2:setAnchorPoint(0.5,0)
+	self.bgSp2:setPosition(display.cx,2*display.cy)
+	self:addChild(self.bgSp2,1)	
 
 	-- hero
     self.plane=HeroPlane:new()
@@ -28,17 +38,41 @@ function MainScene:ctor()
     	self:shoot(1)
     	self:shoot(2)
     	self:shoot(3)
-    	self:bulletTraversal()
     	end, 0.3)
 
+    self:schedule(function()
+    	self:bgAutoMove()
+    	self:bulletTraversal()
+    	end,0.02)
+
     self:onLayerClicked()
+
+    -- test
+    local e=Enemy.new(3,100,200)
+    self:addChild(e,10)
+
+end
+
+
+function MainScene:bgAutoMove()
+	
+	local disHeight=display.height
+
+	local poy1=self.bgSp1:getPositionY()
+	
+	poy1=(poy1-4)%disHeight
+
+	local poy2=poy1-disHeight+1
+
+	self.bgSp1:setPositionY(poy1)
+	self.bgSp2:setPositionY(poy2)
 
 end
 
 function MainScene:onLayerClicked()
-	self.bgSp:setTouchEnabled(true)
+	self.bgLayer:setTouchEnabled(true)
 
-	self.bgSp:addNodeEventListener(cc.NODE_TOUCH_EVENT,function(event)
+	self.bgLayer:addNodeEventListener(cc.NODE_TOUCH_EVENT,function(event)
 		if event.name=="began" then
 			self.plane:move(event.x,event.y)
 			return true
@@ -67,6 +101,9 @@ end
 function MainScene:bulletTraversal()
 	
 	for i,k in pairs(self.bullets) do
+
+		k:move()
+
 		local positionX=k:getPositionX()
 		local positionY=k:getPositionY()
 

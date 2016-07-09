@@ -79,7 +79,7 @@ function StartScene:setStyle()
 end
 
 function StartScene:onEnter()
-	audio.playSound("sound/bgmusic.mp3",true)
+	-- audio.playSound("sound/bgmusic.mp3",true)
 end
 
 return StartScene

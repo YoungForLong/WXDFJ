@@ -16,13 +16,10 @@ function Bullet:ctor(filename,poX,poY,style,parentNode)
 	self:setAnchorPoint(0.5,0)
 	self:setPosition(cc.p(poX,poY))
 
-	parentNode:addChild(self)
+	parentNode:addChild(self,2)
 
 	self.speed=5
 
-	self:schedule(function()
-		self:move()
-		end, 0.01)
 end
 
 function Bullet:move()

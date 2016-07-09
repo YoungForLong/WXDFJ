@@ -8,7 +8,6 @@ function HeroPlane:ctor()
 	self:setAnchorPoint(0.5,0)
 	self:setPosition(display.cx,0)
 	self.speed=200
-
 	-- test
 	-- self:blowup()
 end
@@ -21,16 +20,19 @@ function HeroPlane:move(pox,poy)
 
 	local timeDelay=dis/self.speed
 	
-	local angle = cc.pGetAngle(cc.p(pox,poy),cc.p(self:getPositionX(),self:getPositionY()))
-
-	print(angle)
-
 	local moveAction=cc.MoveTo:create(timeDelay,cc.p(pox , poy))
 
-	local angleTo=cc.RotateBy:create(0.1, angle*180)
+-- angle test
+	-- local tan=(pox-self:getPositionX())/(poy-self:getPositionY())
 
-	local totalAction=cc.Spawn:create(moveAction,angleTo)
-	self:runAction(totalAction)
+	-- local angle = math.atan(tan)*180
+
+	-- local angleTo=cc.RotateBy:create(2*timeDelay/3, angle)
+	-- local angleBack=cc.RotateBy:create(timeDelay/3, -angle)
+	-- local angleRevert=cc.Sequence:create(angleTo,angleBack)
+
+	-- local totalAction=cc.Spawn:create(angleRevert,moveAction)
+	self:runAction(moveAction)
 
 end
 
@@ -41,7 +43,7 @@ function HeroPlane:blowup()
 	-- local action=cc.RepeatForever:create(animate)
 	self:runAction(animate)
 
-	audio.playMusic("sound/hero_down.mp3")
+	-- audio.playMusic("sound/hero_down.mp3")
 end
 
 
