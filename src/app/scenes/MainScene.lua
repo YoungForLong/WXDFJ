@@ -33,6 +33,8 @@ function MainScene:ctor()
     -- bullet arr
     self.bullets={}
 
+    -- enemies
+    self.enemies={}
     
     self:schedule(function()
     	self:shoot(1)
@@ -43,13 +45,14 @@ function MainScene:ctor()
     self:schedule(function()
     	self:bgAutoMove()
     	self:bulletTraversal()
-    	end,0.02)
+    	self.e:enemyUpdate()
+    	end,0.1)
 
     self:onLayerClicked()
 
     -- test
-    local e=Enemy.new(3,100,200)
-    self:addChild(e,10)
+    self.e=Enemy.new(1,100,600)
+    self:addChild(self.e,10)
 
 end
 
@@ -127,6 +130,7 @@ function MainScene:bulletTraversal()
 
 	end
 end
+
 
 
 function MainScene:onEnter()
