@@ -72,11 +72,14 @@ function StartScene:setStyle()
 		elseif event.name=="ended" then
 			startBtn:setSpriteFrame("game_resume_nor.png")
 
-			display.replaceScene(require("app.scenes.MainScene"):new(), "CrossFade", 1)
+			display.replaceScene(require("app.scenes.MainScene").new())
 			end
 		end)
 
 end
 
+function StartScene:onEnter()
+	audio.playSound("sound/bgmusic.mp3",true)
+end
 
 return StartScene

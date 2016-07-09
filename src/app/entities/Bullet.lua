@@ -1,4 +1,6 @@
+
 -- Bullet
+
 
 local Bullet=class("Bullet", function(filename,poX,poY,style,parentNode)
 
@@ -28,21 +30,6 @@ function Bullet:move()
 	local positionX=self:getPositionX()
 	local positionY=self:getPositionY()
 
-	if positionY>(2*display.cy) then
-		self:removeFromParent()
-		return
-	end
-
-	if positionX>(2*display.cx) then
-		self:removeFromParent()
-		return
-	end
-
-	if positionX<0 then
-		self:removeFromParent()
-		return
-	end
-
 	-- update
 
 	if self.moveType==1 then
@@ -52,6 +39,7 @@ function Bullet:move()
 			elseif self.moveType==3 then
 				self:setPosition(cc.p(positionX+self.speed/2,positionY+self.speed*0.8660))
 				end
+
 end
 
 return Bullet

@@ -17,13 +17,18 @@ function MainScene:ctor()
     self.plane=HeroPlane:new()
     self:addChild(self.plane,10)
 
-    --bullet type
+    -- bullet type
     self.bulletType=1
 
+    -- bullet arr
+    self.bullets={}
+
+    
     self:schedule(function()
     	self:shoot(1)
     	self:shoot(2)
     	self:shoot(3)
+    	self:bulletTraversal()
     	end, 0.3)
 
     self:onLayerClicked()
@@ -48,14 +53,44 @@ function MainScene:shoot(ty)
 	if self.bulletType==1 then
 		local filepath="#bullet1.png"
 		local bullet=Bullet.new(filepath,self.plane:getPositionX(),(self.plane:getPositionY()+self.plane:getContentSize().height),ty,self)
+		table.insert(self.bullets,bullet)
 		return
 	end
 
 	if self.bulletType==2 then
 		local filepath="#bullet2.png"
 		local bullet=Bullet.new(filepath,self.plane:getPositionX(),(self.plane:getPositionY()+self.plane:getContentSize().height),ty,self)
+		table.insert(self.bullets,bullet)
 	end
 end
+
+function MainScene:bulletTraversal()
+	
+	for i,k in pairs(self.bullets) do
+		local positionX=k:getPositionX()
+		local positionY=k:getPositionY()
+
+		local tag=0
+
+		if positionY>(2*display.cy) then
+			tag=tag+1
+		end
+
+		if positionX>(2*display.cx) then
+			tag=tag+1
+		end
+
+		if positionX<0 then
+			tag=tag+1
+		end
+		if tag~=0 then
+			k:removeFromParent()
+			table.remove(self.bullets,i)
+		end
+
+	end
+end
+
 
 function MainScene:onEnter()
 end
