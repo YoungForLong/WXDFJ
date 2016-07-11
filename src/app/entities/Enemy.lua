@@ -13,15 +13,17 @@ end)
 
 function Enemy:ctor(ty,pox,poy,target)
 
-	self.Hp=10
+	self.Hp=0
 
 	if ty==1 then 
-		self.HP=10
+		self.HP=1
 		elseif ty==2 then
-			self.HP=20
+			self.HP=4
 		else
-			self.HP=30
+			self.HP=20
 	end
+
+	math.randomseed(os.time())
 
 	self.speed=2
 
@@ -29,13 +31,13 @@ function Enemy:ctor(ty,pox,poy,target)
 
 	self:setPosition(cc.p(pox,poy))
 
-	self:setAnchorPoint(0.5,0)
+	self:setAnchorPoint(0.5,0.5)
 
-	self.wanderTarget=cc.p(0,0)
+	self.wanderTarget=cc.p(40,0)
 
-	self.wanderDis=10000
+	self.wanderDis=400
 
-	self.wanderRadius=2
+	self.wanderRadius=20
 
 	self.wanderJitter=10
 
@@ -46,33 +48,41 @@ end
 
 function Enemy:wander()
 
-	math.randomseed(os.time())
-
 	local randDetax=math.random(-self.wanderJitter,self.wanderJitter)
 	local randDetay=math.random(-self.wanderJitter,self.wanderJitter)
 -- 获取随机点
 	self.wanderTarget=cc.pAdd(self.wanderTarget,cc.p(randDetax,randDetay))
--- 投影到辅助圆上
-	local n_po=cc.pMul(cc.pNormalize(self.wanderTarget),self.wanderRadius)
-	local po=cc.pAdd(n_po,cc.p(0,self.wanderDis))
-	-- print(po.x,po.y)
+-- -- 投影到辅助圆上
+	self.wanderTarget=cc.pNormalize(self.wanderTarget)
+	self.wanderTarget=cc.pMul(self.wanderTarget,self.wanderRadius)
+	local po_local=cc.p(self.wanderTarget.x,self.wanderTarget.y-self.wanderDis)
+
+	-- print("local_position",po_local.x,po_local.y)
+
+	-- print("rotation",self:getRotation())
 -- 转换到世界坐标系
-	local po_world=self:convertToWorldSpace(po)
-	print(po_world.x,po_world.y)
---test
-	local dis=cc.pGetDistance(cc.p(self:getPositionX(),self:getPositionY()),po_world)
-	local length=cc.pGetLength(po)
-	if math.abs(dis-length)<0.01 then
-		print("Inside")
-	else
-		print("Outside")
-	end
+	local po_world=self:convertToWorldSpaceAR(cc.p(po_local.x,po_local.y))
+
+	-- print("world_position",po_world.x,po_world.y)
 -- 向这个点运动
 	self:seek(po_world.x,po_world.y)
 
 end
 
+-- function Enemy:wander()
+
+-- 	local randDetay=math.random(-90,90)
+
+-- 	self.wanderTarget=cc.p(self.wanderDis,(self.wanderTarget.y+math.sin(randDetay)))
+
+-- 	local po_world=self:convertToWorldSpaceAR(self.wanderTarget)
+
+-- 	self:seek(po_world.x,po_world.y)
+-- end
+
 function Enemy:seek(pox,poy) -- world space 朝向这个点的运动
+
+	-- print(pox,poy)
 	local toTarget=cc.p(pox-self:getPositionX(),poy-self:getPositionY())
 
 	local n_toTarget=cc.pNormalize(toTarget)
@@ -103,65 +113,30 @@ end
 function Enemy:enemyDown()
 	self:stopAllActions()
 
+	local call=cc.CallFunc:create(function()
+		self:removeFromParent()
+		end)
+
 	if self.t==1 then
 		local frames=display.newFrames("enemy1_down%d.png",1,4)
 		local animation=display.newAnimation(frames,0.2)
 		local animate=cc.Animate:create(animation)
-		self:runAction(animate)
+		local callAction=cc.Sequence:create(animate,call)
+		self:runAction(callAction)
 		elseif self.t==2 then
 			local frames=display.newFrames("enemy2_down%d.png",1,4)
 			local animation=display.newAnimation(frames,0.2)
 			local animate=cc.Animate:create(animation)
-			self:runAction(animate)
+			local callAction=cc.Sequence:create(animate,call)
+			self:runAction(callAction)
 		else
 			local frames=display.newFrames("enemy3_down%d.png",1,6)
 			local animation=display.newAnimation(frames,0.2)
 			local animate=cc.Animate:create(animation)
-			self:runAction(animate)
+			local callAction=cc.Sequence:create(animate,call)
+			self:runAction(callAction)
 		end
 end
 
--- reload convert to world space 
--- Vec2 convertToWorldSpace(Vec2 point)
--- 	{
--- 		//该死的数学！ ~TAT`
--- 		double hx = this->_heading.x;
--- 		hx += 0.00001;
--- 		double hy = this->_heading.y;
--- 		hy += 0.00001;
--- 		double x0 = point.x;
--- 		x0 += 0.00001;
--- 		double y0 = point.y;
--- 		y0 += 0.00001;
-
--- 		//math function:
--- 		/*
-
--- 		a:本地坐标与世界坐标夹角，即heading
--- 		b:向量的本地坐标
--- 		c:向量的世界坐标
-
--- 		a+b-c=90
-
--- 		tan(a)+tan(b)         1
--- 		_____________  = - ________
--- 		1-tan(a)tan(b)      tan(c)
-
--- 		*/
-
--- 		Vec2 temp = Vec2::ZERO;
-
--- 		temp.x = (hy / hx) + (y0 / x0);
-
--- 		temp.y = (hy / hx) + (y0 / x0) - 1;
-
--- 		temp.getNormalized();
-
--- 		return (temp*point.getLength());
--- 	}
-function Enemy:conver2World()
-	
-	
-end
 
 return Enemy

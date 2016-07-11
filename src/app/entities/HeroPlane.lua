@@ -8,6 +8,7 @@ function HeroPlane:ctor()
 	self:setAnchorPoint(0.5,0)
 	self:setPosition(display.cx,0)
 	self.speed=200
+	self.HP=100
 	-- test
 	-- self:blowup()
 end

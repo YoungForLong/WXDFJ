@@ -1,12 +1,25 @@
 local HeroPlane=require("app.entities.HeroPlane")
 local Bullet=require("app.entities.Bullet")
 local Enemy=require("app.entities.Enemy")
+local FailedLayer=require("app.scenes.FailedLayer")
+
+MyScore=0
 
 local MainScene = class("MainScene", function()
     return display.newScene("MainScene")
 end)
 
 function MainScene:ctor()
+	-- index
+	MyScore=0
+	self.la=cc.ui.UILabel.new({
+		text="score: ",
+		size=40
+		})
+	self.la:addTo(self,100)
+	self.la:setPosition(cc.p(display.cx,display.height-100))
+	self.la:setAnchorPoint(0.5,0.5)
+
 	-- bg
 	self.bgLayer=display.newLayer()
 	self.bgLayer:setAnchorPoint(0.5,0)
@@ -35,27 +48,90 @@ function MainScene:ctor()
 
     -- enemies
     self.enemies={}
+
+    self.enCount=0
     
     self:schedule(function()
+    	self:myUpdate()
+    	-- self:shoot(1)
+    	-- self:shoot(2)
     	self:shoot(1)
-    	self:shoot(2)
-    	self:shoot(3)
-    	end, 0.3)
+
+    	if self.enCount==3 then
+			self:enemyBorn()
+		end
+
+		self.enCount=self.enCount+1
+		self.enCount=self.enCount%4
+    	end, 0.5)
 
     self:schedule(function()
     	self:bgAutoMove()
     	self:bulletTraversal()
-    	self.e:enemyUpdate()
-    	end,0.1)
+    	self:enemyTraversal()
+    	end,0.01)
 
     self:onLayerClicked()
 
     -- test
-    self.e=Enemy.new(1,100,600)
-    self:addChild(self.e,10)
+    -- self.e=Enemy.new(1,100,600)
+    -- self:addChild(self.e,10)
+
 
 end
 
+function MainScene:enemyBorn()
+	local e=Enemy.new(1,100,600)
+	self:addChild(e,10)
+	table.insert(self.enemies,e)
+end
+
+function MainScene:myUpdate()
+	self.la:setString("score: "..MyScore)
+
+end
+
+function MainScene:enemyTraversal()
+	-- print(#self.enemies)
+	for k,v in pairs(self.enemies) do
+		v:enemyUpdate()
+		if v:getPositionX()<-100 or v:getPositionX()>(display.width+100) then
+
+			v:removeFromParent()
+			table.remove(self.enemies,k)
+		end
+	end
+
+	for i=#self.enemies,1,-1 do
+		for j=#self.bullets,1,-1 do
+			if cc.rectIntersectsRect(self.enemies[i]:getBoundingBox(),self.bullets[j]:getBoundingBox()) then
+				
+				self.enemies[i].HP=self.enemies[i].HP-1
+
+				if self.enemies[i].HP==0 then
+					self.enemies[i]:enemyDown()
+					table.remove(self.enemies,i)
+				end
+				MyScore=MyScore+1
+
+				self.bullets[j]:removeFromParent()
+				table.remove(self.bullets,j)
+
+				break
+			end
+		end
+	end
+
+	for k,v in pairs(self.enemies) do
+		if cc.rectIntersectsRect(v:getBoundingBox(),self.plane:getBoundingBox()) then
+			self.plane.HP=self.plane.HP-1
+			if self.plane.HP==0 then
+				self.plane:blowup()
+				self:createFailedLayer()
+			end
+		end
+	end
+end
 
 function MainScene:bgAutoMove()
 	
@@ -70,6 +146,11 @@ function MainScene:bgAutoMove()
 	self.bgSp1:setPositionY(poy1)
 	self.bgSp2:setPositionY(poy2)
 
+end
+function MainScene:createFailedLayer()
+	self:pause()
+	self:setTouchEnabled(false)
+	self:addChild(FailedLayer:new(),1000)
 end
 
 function MainScene:onLayerClicked()

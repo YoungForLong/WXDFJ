@@ -60,7 +60,7 @@ function StartScene:setStyle()
 
 	local startBtn=cc.Sprite:createWithSpriteFrameName("game_resume_nor.png")
 	startBtn:setPosition(display.cx,display.cy)
-	startBtn:setScale(4)
+	startBtn:setScale(2)
 	self:addChild(startBtn,10)
 
 	startBtn:setTouchEnabled(true)
