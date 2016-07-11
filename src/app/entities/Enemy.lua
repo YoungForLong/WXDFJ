@@ -1,4 +1,4 @@
-
+local Bullet=require("app.entities.bullet")
 
 local Enemy = class("Enemy",function(ty,pox,poy,target)
 	if ty==1 then

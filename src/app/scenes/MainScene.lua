@@ -1,7 +1,6 @@
 local HeroPlane=require("app.entities.HeroPlane")
 local Bullet=require("app.entities.Bullet")
 local Enemy=require("app.entities.Enemy")
-local FailedLayer=require("app.scenes.FailedLayer")
 
 MyScore=0
 
@@ -35,6 +34,8 @@ function MainScene:ctor()
 	self.bgSp2:setAnchorPoint(0.5,0)
 	self.bgSp2:setPosition(display.cx,2*display.cy)
 	self:addChild(self.bgSp2,1)	
+
+    self:onLayerClicked()
 
 	-- hero
     self.plane=HeroPlane:new()
@@ -70,8 +71,6 @@ function MainScene:ctor()
     	self:bulletTraversal()
     	self:enemyTraversal()
     	end,0.01)
-
-    self:onLayerClicked()
 
     -- test
     -- self.e=Enemy.new(1,100,600)
@@ -123,12 +122,18 @@ function MainScene:enemyTraversal()
 	end
 
 	for k,v in pairs(self.enemies) do
+
 		if cc.rectIntersectsRect(v:getBoundingBox(),self.plane:getBoundingBox()) then
+
 			self.plane.HP=self.plane.HP-1
+
+			v:enemyDown()
 			if self.plane.HP==0 then
 				self.plane:blowup()
 				self:createFailedLayer()
 			end
+
+			table.remove(self.enemies,k)
 		end
 	end
 end
@@ -149,8 +154,37 @@ function MainScene:bgAutoMove()
 end
 function MainScene:createFailedLayer()
 	self:pause()
-	self:setTouchEnabled(false)
-	self:addChild(FailedLayer:new(),1000)
+	self.bgLayer:setTouchEnabled(false)
+
+	local failedLayer=display.newColorLayer(cc.c4f(0, 0, 0, 200))
+
+	local drawNode=cc.DrawNode:create()
+	drawNode:drawPolygon({
+		cc.p(display.cx-220,display.cy-200),
+		cc.p(display.cx+220,display.cy-200),
+		cc.p(display.cx+220,display.cy+100),
+		cc.p(display.cx-220,display.cy+100)
+		})
+
+	failedLayer:addChild(drawNode, 1)
+
+	self:addChild(failedLayer,1000)
+
+	local ULOSE_sp=display.newSprite("lose.png")
+	ULOSE_sp:setAnchorPoint(0.5,0.5)
+	ULOSE_sp:setPosition(display.cx,display.cy-40)
+
+	local lab=cc.ui.UILabel.new({
+		text=MyScore,
+		size=60,
+		color=cc.c4f(242,172,4,255)
+		})
+	lab:setAnchorPoint(0,0)
+	lab:setPosition(240,280)
+	failedLayer:addChild(lab, 2)
+
+
+	failedLayer:addChild(ULOSE_sp,2)
 end
 
 function MainScene:onLayerClicked()
