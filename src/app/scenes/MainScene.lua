@@ -3,6 +3,7 @@ local Bullet=require("app.entities.Bullet")
 local Enemy=require("app.entities.Enemy")
 
 MyScore=0
+global_fps=100
 
 local MainScene = class("MainScene", function()
     return display.newScene("MainScene")
@@ -52,11 +53,12 @@ function MainScene:ctor()
 
     self.enCount=0
     
+    -- update
     self:schedule(function()
     	self:myUpdate()
-    	-- self:shoot(1)
-    	-- self:shoot(2)
     	self:shoot(1)
+    	-- self:shoot(2)
+    	-- self:shoot(3)
 
     	if self.enCount==3 then
 			self:enemyBorn()
@@ -70,7 +72,12 @@ function MainScene:ctor()
     	self:bgAutoMove()
     	self:bulletTraversal()
     	self:enemyTraversal()
-    	end,0.01)
+    	end,1/global_fps)
+
+    -- close btn
+
+    -- local closeBtn=
+
 
     -- test
     -- self.e=Enemy.new(1,100,600)
@@ -79,8 +86,12 @@ function MainScene:ctor()
 
 end
 
+function MainScene:record()
+	
+end
+
 function MainScene:enemyBorn()
-	local e=Enemy.new(1,100,600)
+	local e=Enemy.new(1,100,600,self.plane)
 	self:addChild(e,10)
 	table.insert(self.enemies,e)
 end
@@ -123,7 +134,7 @@ function MainScene:enemyTraversal()
 
 	for k,v in pairs(self.enemies) do
 
-		if cc.rectIntersectsRect(v:getBoundingBox(),self.plane:getBoundingBox()) then
+		if cc.rectIntersectsRect(v:getBoundingBox(),self.plane:getNewBox()) then
 
 			self.plane.HP=self.plane.HP-1
 

@@ -36,7 +36,16 @@ function Bullet:move()
 			elseif self.moveType==3 then
 				self:setPosition(cc.p(positionX+self.speed/2,positionY+self.speed*0.8660))
 				end
+end
 
+function Bullet:moveByAngle(angle)
+	local positionX=self:getPositionX()
+	local positionY=self:getPositionY()
+
+	local dX=self.speed*math.sin(angle)	
+	local dY=self.speed*math.cos(angle)
+
+	self:setPosition(cc.p(positionX+dX,positionY+dY))
 end
 
 return Bullet

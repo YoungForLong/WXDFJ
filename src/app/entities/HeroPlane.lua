@@ -7,8 +7,8 @@ local HeroPlane=class("HeroPlane", function()
 function HeroPlane:ctor()
 	self:setAnchorPoint(0.5,0)
 	self:setPosition(display.cx,0)
-	self.speed=200
-	self.HP=2
+	self.speed=2
+	self.HP=100000
 	-- test
 	-- self:blowup()
 end
@@ -19,7 +19,7 @@ function HeroPlane:move(pox,poy)
 
 	local dis=cc.pGetDistance(cc.p(pox,poy),cc.p(self:getPositionX(),self:getPositionY()))
 
-	local timeDelay=dis/self.speed
+	local timeDelay=dis/self.speed/global_fps
 	
 	local moveAction=cc.MoveTo:create(timeDelay,cc.p(pox , poy))
 
@@ -35,6 +35,17 @@ function HeroPlane:move(pox,poy)
 	-- local totalAction=cc.Spawn:create(angleRevert,moveAction)
 	self:runAction(moveAction)
 
+end
+
+function HeroPlane:getNewBox()
+	local originBox=self:getBoundingBox()
+
+	originBox.x=originBox.x+10
+	originBox.y=originBox.y +10
+	originBox.width=originBox.width-20
+	originBox.height=originBox.height-20
+
+	return originBox
 end
 
 function HeroPlane:blowup()
