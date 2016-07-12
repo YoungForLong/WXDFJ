@@ -2,8 +2,15 @@ local HeroPlane=require("app.entities.HeroPlane")
 local Bullet=require("app.entities.Bullet")
 local Enemy=require("app.entities.Enemy")
 
+-- global containers or refers
 MyScore=0
 global_fps=100
+
+-- enemies
+enemies={}
+
+-- bullet arr
+bullets={}
 
 local MainScene = class("MainScene", function()
     return display.newScene("MainScene")
@@ -44,12 +51,6 @@ function MainScene:ctor()
 
     -- bullet type
     self.bulletType=1
-
-    -- bullet arr
-    self.bullets={}
-
-    -- enemies
-    self.enemies={}
 
     self.enCount=0
     
@@ -93,7 +94,7 @@ end
 function MainScene:enemyBorn()
 	local e=Enemy.new(1,100,600,self.plane)
 	self:addChild(e,10)
-	table.insert(self.enemies,e)
+	table.insert(enemies,e)
 end
 
 function MainScene:myUpdate()
@@ -102,49 +103,51 @@ function MainScene:myUpdate()
 end
 
 function MainScene:enemyTraversal()
-	-- print(#self.enemies)
-	for k,v in pairs(self.enemies) do
-		v:enemyUpdate()
+	-- print(#enemies)
+	for k,v in pairs(enemies) do
+		v:allUpdate()
 		if v:getPositionX()<-100 or v:getPositionX()>(display.width+100) then
-
 			v:removeFromParent()
-			table.remove(self.enemies,k)
+			table.remove(enemies,k)
 		end
 	end
 
-	for i=#self.enemies,1,-1 do
-		for j=#self.bullets,1,-1 do
-			if cc.rectIntersectsRect(self.enemies[i]:getBoundingBox(),self.bullets[j]:getBoundingBox()) then
+	for i=#enemies,1,-1 do
+		for j=#bullets,1,-1 do
+			if cc.rectIntersectsRect(enemies[i]:getBoundingBox(),bullets[j]:getBoundingBox()) then
 				
-				self.enemies[i].HP=self.enemies[i].HP-1
+				enemies[i].HP=enemies[i].HP-1
+				-- 被攻击到了后会进入Fear状态
+				enemies[i]:handleMsg("on_injured")
 
-				if self.enemies[i].HP==0 then
-					self.enemies[i]:enemyDown()
-					table.remove(self.enemies,i)
+				if enemies[i].HP==0 then
+					enemies[i]:enemyDown()
+					table.remove(enemies,i)
 				end
 				MyScore=MyScore+1
 
-				self.bullets[j]:removeFromParent()
-				table.remove(self.bullets,j)
+				bullets[j]:removeFromParent()
+				table.remove(bullets,j)
 
 				break
 			end
 		end
 	end
 
-	for k,v in pairs(self.enemies) do
+	for k,v in pairs(enemies) do
 
 		if cc.rectIntersectsRect(v:getBoundingBox(),self.plane:getNewBox()) then
 
 			self.plane.HP=self.plane.HP-1
 
 			v:enemyDown()
+
 			if self.plane.HP==0 then
 				self.plane:blowup()
 				self:createFailedLayer()
 			end
 
-			table.remove(self.enemies,k)
+			table.remove(enemies,k)
 		end
 	end
 end
@@ -216,20 +219,20 @@ function MainScene:shoot(ty)
 	if self.bulletType==1 then
 		local filepath="#bullet1.png"
 		local bullet=Bullet.new(filepath,self.plane:getPositionX(),(self.plane:getPositionY()+self.plane:getContentSize().height),ty,self)
-		table.insert(self.bullets,bullet)
+		table.insert(bullets,bullet)
 		return
 	end
 
 	if self.bulletType==2 then
 		local filepath="#bullet2.png"
 		local bullet=Bullet.new(filepath,self.plane:getPositionX(),(self.plane:getPositionY()+self.plane:getContentSize().height),ty,self)
-		table.insert(self.bullets,bullet)
+		table.insert(bullets,bullet)
 	end
 end
 
 function MainScene:bulletTraversal()
 	
-	for i,k in pairs(self.bullets) do
+	for i,k in pairs(bullets) do
 
 		k:move()
 
@@ -251,7 +254,7 @@ function MainScene:bulletTraversal()
 		end
 		if tag~=0 then
 			k:removeFromParent()
-			table.remove(self.bullets,i)
+			table.remove(bullets,i)
 		end
 
 	end

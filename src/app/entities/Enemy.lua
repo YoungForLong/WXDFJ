@@ -1,4 +1,6 @@
-local Bullet=require("app.entities.bullet")
+local Bullet=require("app.entities.Bullet")
+local FSM=require("app.common.FiniteStateMachine")
+require("app.entities.EnemyOwnedStates")
 
 local Enemy = class("Enemy",function(ty,pox,poy,target)
 	if ty==1 then
@@ -64,6 +66,12 @@ function Enemy:ctor(ty,pox,poy,target)
 	self.weightPursuit=10.0
 	self.weightInterpose=10.0
 	self.weightHide=1.0
+
+	-- 状态机
+	self._fsm=FSM:new()
+	self._fsm:ctor(self,Normal,nil)
+	-- dump(self._fsm._currentState)
+
 end
 
 -- move behaviors 以下的方法控制敌机的运动，主要有追踪pursuit，闲逛wander，插入interpose（boss出来之后会插入到hero和
@@ -120,7 +128,12 @@ function Enemy:wander()
 end
 
 function Enemy:interpose()
-		
+	-- 由于被保护的目标----boss是运动缓慢的实体，所以此处我们不做运动预测
+
+	-- 中点
+	local midPosition=cc.pMul(cc.pAdd(Boss:getPosition(),self.pursuitTarget:getPosition()),0.5)
+
+	return seek(midPosition.x,midPosition.y)
 end
 
 function Enemy:seek(pox,poy) -- world space 朝向这个点的运动
@@ -136,6 +149,28 @@ function Enemy:seek(pox,poy) -- world space 朝向这个点的运动
 end
 
 function Enemy:hide()
+	local nearestEnemy=nil
+	local minDis=1000000
+	for k,v in pairs(enemies) do
+		local dis=cc.pGetDistance(v:getPosition(),self:getPosition())
+		if dis<minDis then
+			nearestEnemy=enemies[k]
+			minDis=dis
+		end
+	end
+	-- 此处由于找到点到直线的投影运算效率太低，此处我们用固定值10
+
+	-- 躲避目标到遮蔽物的向量
+	local friend2target=cc.pSub(self.pursuitTarget:getPosition(),nearestEnemy:getposition())
+
+	-- 将其变为定长
+	local plusVec2=cc.pMul(cc.pNormalize(friend2target),10)
+
+	-- 找到目标点
+ 	local purpose=cc.pAdd(nearestEnemy:getPosition(),plusVec2)
+
+	return seek(purpose)
+
 end
 
 function Enemy:removeAllBehaviors()
@@ -143,10 +178,22 @@ function Enemy:removeAllBehaviors()
 		v=false
 	end
 end
--- move behaviors end
+----------------- move behaviors end ------------------
+
+
+function Enemy:handleMsg(msg)
+	self._fsm:handleMsg(msg)
+end
+
+function Enemy:allUpdate()
+	self._fsm:update()
+end
 
 function Enemy:rotate(pox,poy)
-	self:setRotation(math.atan2((pox-self:getPositionX()),(poy-self:getPositionY()))*180/3.1415926+180)
+	self:setRotation(math.atan2(
+		(pox-self:getPositionX()),
+		(poy-self:getPositionY())
+		)*180/3.1415926+180)
 end
 
 function Enemy:hit()
@@ -162,9 +209,19 @@ end
 
 function Enemy:accumulateMovement(singleMovement,totalMovement)
 	-- 计算是否在最大速度范围之内能继续运动
+	-- if not enough ,slice it
 	local remindSpeed=self.speed-cc.pGetLength(totalMovement)
 
-	if cc.pGetLength(cc.pPlus(singleMovement,totalMovement))
+	local temp=cc.pAdd(singleMovement,totalMovement)
+	
+	if math.abs(cc.pGetLength(temp)-self.speed)>0.0001 then
+		totalMovement=cc.pAdd(totalMovement,temp)
+	else
+		-- 此处我们将其裁剪
+		totalMovement=cc.pAdd(totalMovement,cc.pMul(cc.pNormalize(temp),remindSpeed))
+	end
+
+	return totalMovement
 end
 
 function Enemy:movementUpdate()
@@ -173,22 +230,31 @@ function Enemy:movementUpdate()
 
 	local totalMovement=cc.p(0,0) -- 合运动
 
+	if self.behaviorTable.onHide then
+		totalMovement=self:accumulateMovement(cc.pMul(self:hide(),self.weightHide),
+			totalMovement)
+	end
 
 	if self.behaviorTable.onWander then
-		self:wander()
+		totalMovement=self:accumulateMovement(cc.pMul(self:wander(),self.weightWander), 
+			totalMovement)
+			print("OUT: ",totalMovement.x)
+
 	end
 
 	if self.behaviorTable.onPursuit then
-		self:pursuit()
+		totalMovement=self:accumulateMovement(cc.pMul(self:pursuit(),self.weightPursuit), 
+			totalMovement)
 	end
 
 	if self.behaviorTable.onInterPose then
-		self:interpose()
+		totalMovement=self:accumulateMovement(cc.pMul(self:interpose(),self.weightInterpose), 
+			totalMovement)
 	end
 
-	if self.behaviorTable.onHide then
-		self:hide()
-	end
+	self:setPosition(cc.p(self:getPositionX()+totalMovement.x,self:getPositionY()+totalMovement.y))
+	-- print(totalMovement.x,totalMovement.y)
+	self:rotate(totalMovement.x,totalMovement.y)
 end
 
 function Enemy:enemyDown()

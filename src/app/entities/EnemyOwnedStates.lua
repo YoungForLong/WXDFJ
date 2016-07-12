@@ -7,13 +7,15 @@ local State=require("app.common.State")
 -- 第三种是boss存在时的状态，敌机会为boss挡子弹，依然会撞击hero
 
 
-Normal={
-}
+Normal=State:new()
+
+
+-- setmetatable(Normal,State)
 
 function Normal:enter(owner)
 	owner:removeAllBehaviors()
 	owner.behaviorTable.onWander=true
-	owner.behaviorTabel.onPursuit=true
+	owner.behaviorTable.onPursuit=true
 end
 
 -- 完全引用父类的函数
@@ -30,12 +32,10 @@ function Normal:handleMsg(owner,msg)
 	end
 end
 
-setmetatable(Normal,State)
 
 
-Fear={
-}
-
+Fear=State:new()
+-- setmetatable(Fear, State)
 function  Fear:enter(owner)
 	owner:removeAllBehaviors()
 	owner.behaviorTabel.onWander=true
@@ -48,10 +48,9 @@ function Fear:handleMsg(owner, msg)
 	end
 end
 
-setmetatable(Fear, State)
 
-BossExisting= {
-}
+
+BossExisting=State:new()
 
 function BossExisting:enter(owner)
 	owner:removeAllBehaviors()

@@ -4,6 +4,13 @@ local State={
 
 }
 
+function State:new()
+	local p={}
+	setmetatable(p,self)
+	self.__index=self
+	return p
+end
+
 function State:enter(owner)
 end
 
