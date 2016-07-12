@@ -50,6 +50,20 @@ function Enemy:ctor(ty,pox,poy,target)
 
 	-- 视野
 	self.sightDis=300
+
+	-- 行为表，用来存储正在执行的行为
+	self.behaviorTable={
+		onWander=false,
+		onPursuit=false,
+		onInterpose=false,
+		onHide=false
+	}
+
+	-- 行为阈值
+	self.weightWander=1.0
+	self.weightPursuit=10.0
+	self.weightInterpose=10.0
+	self.weightHide=1.0
 end
 
 -- move behaviors 以下的方法控制敌机的运动，主要有追踪pursuit，闲逛wander，插入interpose（boss出来之后会插入到hero和
@@ -60,7 +74,7 @@ function Enemy:pursuit()
 	-- 视野之外不会触发
 	if cc.pGetDistance(cc.p(self:getPositionX(),self:getPositionY()),
 		cc.p(self.pursuitTarget:getPositionX(),self.pursuitTarget:getPositionY()))>self.sightDis
-	then return end
+	then return cc.p(0,0) end
 
 	local toEvade=cc.pSub(cc.p(self.pursuitTarget:getPositionX(),self.pursuitTarget:getPositionY()),
 	cc.p(self:getPositionX(),self:getPositionY())) -- 追踪向量
@@ -80,7 +94,7 @@ function Enemy:pursuit()
 	local preX=self.pursuitTarget:getPositionX()+math.sin(self.pursuitTarget:getRotation())*self.pursuitTarget.speed*predictTime
 	local preY=self.pursuitTarget:getPositionY()+math.cos(self.pursuitTarget:getRotation())*self.pursuitTarget.speed*predictTime
 
-	self:seek(preX,preY)
+	return self:seek(preX,preY)
 end
 
 function Enemy:wander()
@@ -102,8 +116,11 @@ function Enemy:wander()
 
 	-- print("world_position",po_world.x,po_world.y)
 	-- 向这个点运动
-	self:seek(po_world.x,po_world.y)
+	return self:seek(po_world.x,po_world.y)
+end
 
+function Enemy:interpose()
+		
 end
 
 function Enemy:seek(pox,poy) -- world space 朝向这个点的运动
@@ -115,13 +132,22 @@ function Enemy:seek(pox,poy) -- world space 朝向这个点的运动
 
 	local toTarget_unit=cc.pMul(n_toTarget,self.speed)
 
-	self:setPosition(cc.p(self:getPositionX()+toTarget_unit.x,
-	self:getPositionY()+toTarget_unit.y))
-
-	self:setRotation(math.atan2((pox-self:getPositionX()),(poy-self:getPositionY()))*180/3.1415926+180)
+	return toTarget_unit
 end
 
+function Enemy:hide()
+end
+
+function Enemy:removeAllBehaviors()
+	for k,v in pairs(self.behaviorTable) do
+		v=false
+	end
+end
 -- move behaviors end
+
+function Enemy:rotate(pox,poy)
+	self:setRotation(math.atan2((pox-self:getPositionX()),(poy-self:getPositionY()))*180/3.1415926+180)
+end
 
 function Enemy:hit()
 	if self.t==3 then
@@ -134,13 +160,35 @@ function Enemy:hit()
 	end
 end
 
-function Enemy:attack()
-	
+function Enemy:accumulateMovement(singleMovement,totalMovement)
+	-- 计算是否在最大速度范围之内能继续运动
+	local remindSpeed=self.speed-cc.pGetLength(totalMovement)
+
+	if cc.pGetLength(cc.pPlus(singleMovement,totalMovement))
 end
 
-function Enemy:enemyUpdate()
-	self:wander()
-	self:pursuit()
+function Enemy:movementUpdate()
+	-- 此处我们计算所有运动的合运动
+	-- 每个运动有它的阈值和优先级，阈值和优先级高的运动会被先执行
+
+	local totalMovement=cc.p(0,0) -- 合运动
+
+
+	if self.behaviorTable.onWander then
+		self:wander()
+	end
+
+	if self.behaviorTable.onPursuit then
+		self:pursuit()
+	end
+
+	if self.behaviorTable.onInterPose then
+		self:interpose()
+	end
+
+	if self.behaviorTable.onHide then
+		self:hide()
+	end
 end
 
 function Enemy:enemyDown()
