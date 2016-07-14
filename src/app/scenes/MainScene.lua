@@ -62,26 +62,22 @@ function MainScene:ctor()
     -- update
 
     self:schedule(function()
-    	self:myUpdate()
-    	self:shoot(1)
-    	-- self:shoot(2)
-    	-- self:shoot(3)
 
     	self:shouldCreateBoss()
 
-    	if self.bossExiting then
-    		Boss:bossUpdate()
+    	if self.bossExisting then
+    		self.boss:bossUpdate()
     	end
 
-    	if self.enCount==2 then
+    	if self.enCount==9 then
+    		self:myUpdate()
+    		self:shoot(1)
 			self:enemyBorn()
 		end
 
 		self.enCount=self.enCount+1
-		self.enCount=self.enCount%3
-    	end, 0.2)
+		self.enCount=self.enCount%10
 
-    self:schedule(function()
     	self:bgAutoMove()
     	self:bulletTraversal()
     	self:enemyTraversal()
@@ -92,7 +88,7 @@ function MainScene:ctor()
     -- local closeBtn=
 
     -- Boss
-    self.bossExiting=false
+    self.bossExisting=false
 
     self.boss=Boss.new(math.random(0,display.width),display.height-100,self.plane)
 
@@ -106,9 +102,11 @@ end
 
 function MainScene:shouldCreateBoss()
 	self.timming=self.timming+1
-	if self.timming>100 then
-		self:addChild(self.boss,10)
-		self.bossExiting=true
+	if self.timming>100  then
+		if self.bossExisting==false then
+			self:addChild(self.boss,10)
+			self.bossExisting=true
+		end
 	end
 end
 
@@ -294,14 +292,24 @@ end
 
 function MainScene:bulletTraversal()
 	
-	for k,v in pairs(bullets) do
+	for i=#bullets,1,-1  do
 
 		-- 子弹移动
-		v:move()
+		bullets[i]:move()
+
+		--是否打击到boss
+		-- local temp=self.bossExisting and cc.rectIntersectsRect(bullets[i]:getBoundingBox(),self.boss:getBoundingBox())
+		-- print(temp)
+		-- if temp then
+		-- 	self.boss:injur()
+		-- 	bullets[i]:removeFromParent()
+		-- 	table.remove(bullets,bullets[i])
+		-- 	break
+		-- end
 
 		-- 子弹是否超出边界
-		local positionX=v:getPositionX()
-		local positionY=v:getPositionY()
+		local positionX=bullets[i]:getPositionX()
+		local positionY=bullets[i]:getPositionY()
 
 		local tag=0
 
@@ -317,14 +325,8 @@ function MainScene:bulletTraversal()
 			tag=tag+1
 		end
 		if tag~=0 then
-			v:removeFromParent()
+			bullets[i]:removeFromParent()
 			table.remove(bullets,k)
-		end
-
-		if self.bossExiting then
-			if cc.rectIntersectsRect(v:getBoundingBox(),Boss:getBoundingBox()) then
-				boss:injur()
-			end
 		end
 	end
 end

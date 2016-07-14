@@ -32,12 +32,13 @@ function Boss:blowDown()
 	local animate=cc.Animate:create(animation)
 	local callAction=cc.Sequence:create(animate,call)
 	self:runAction(callAction)
-
+	self:getParent().bossExisting=false
 	self:removeFromParent()
 end
 function Boss:spread(msg) -- 扩散，指的是不停向周围发送消息的行为
 	for k,v in pairs(enemies) do
-		if cc.pGetDistance(self:getPosition(),v:getPosition())<self.effectDis then
+		if cc.pGetDistance(cc.p(self:getPositionX(),self:getPositionY()),
+			cc.p(v:getPositionX(),v:getPositionY()))<self.effectDis then
 			v:handleMsg(msg)
 		end
 	end
@@ -75,11 +76,15 @@ function Boss:search()-- 找到一个运动方向，尽量避免子弹的同时�
 	local minDis=100000
 	
 	for k,v in pairs(bullets) do
-		local tempDis=cc.pGetDistance(v:getPosition(),self:getPosition())
+		local tempDis=cc.pGetDistance(cc.p(v:getPositionX(),v:getPositionY()),cc.p(self:getPositionX(),self:getPositionY()))
 		if tempDis<minDis then
 			minDis=tempDis
 			nearestBullet=bullets[k]
 		end
+	end
+
+	if not nearestBullet then
+		return
 	end
 
 	local xToHero=self:getPositionX()-self.heroTarget:getPositionX()
@@ -88,7 +93,7 @@ function Boss:search()-- 找到一个运动方向，尽量避免子弹的同时�
 
 	local result=xToHero+xFromBullet
 
-	result=cc.pNormalize(result)*self.speed
+	result=result/math.abs(result)*self.speed
 
 	local assumeX=self:getPositionX()+result
 
