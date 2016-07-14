@@ -5,11 +5,9 @@ require("app.entities.EnemyOwnedStates")
 local Enemy = class("Enemy",function(ty,pox,poy,target)
 	if ty==1 then
 		return display.newSprite("#enemy1.png")
-		elseif ty==2 then
-			return display.newSprite("#enemy2.png")
-		else
-			return display.newSprite("#enemy3_hit.png")
-		end
+	else
+		return display.newSprite("#enemy2.png")
+	end
 end)
 
 
@@ -18,16 +16,13 @@ function Enemy:ctor(ty,pox,poy,target)
 	self.Hp=0
 
 	if ty==1 then 
-		self.HP=1
-		elseif ty==2 then
-			self.HP=4
-		else
-			self.HP=20
+		self.HP=2
+	else
+		self.HP=4
 	end
 
-	math.randomseed(os.time())
 	-- 速度
-	self.speed=2
+	self.speed=4
 	-- 类型
 	self.t=ty
 
@@ -61,11 +56,11 @@ function Enemy:ctor(ty,pox,poy,target)
 		onHide=false
 	}
 
-	-- 行为阈值
-	self.weightWander=1.0
-	self.weightPursuit=10.0
-	self.weightInterpose=10.0
-	self.weightHide=1.0
+	-- 行为阈值，该值会被状态机改变
+	self.weightWander=0.3
+	self.weightPursuit=0.2
+	self.weightInterpose=0.4
+	self.weightHide=0.1
 
 	-- 状态机
 	self._fsm=FSM:new()
@@ -74,7 +69,9 @@ function Enemy:ctor(ty,pox,poy,target)
 
 end
 
--- move behaviors 以下的方法控制敌机的运动，主要有追踪pursuit，闲逛wander，插入interpose（boss出来之后会插入到hero和
+-- move behaviors 以下的方法控制敌机的运动，主要有追踪pursuit，
+-- 闲逛wander，躲藏（受伤之后会躲藏到附近的友军后面）
+-- 插入interpose（boss出来之后会插入到hero和
 -- boss之间来保护boss）
 
 function Enemy:pursuit()
@@ -82,7 +79,7 @@ function Enemy:pursuit()
 	-- 视野之外不会触发
 	if cc.pGetDistance(cc.p(self:getPositionX(),self:getPositionY()),
 		cc.p(self.pursuitTarget:getPositionX(),self.pursuitTarget:getPositionY()))>self.sightDis
-	then return cc.p(0,0) end
+	then return end
 
 	local toEvade=cc.pSub(cc.p(self.pursuitTarget:getPositionX(),self.pursuitTarget:getPositionY()),
 	cc.p(self:getPositionX(),self:getPositionY())) -- 追踪向量
@@ -92,7 +89,8 @@ function Enemy:pursuit()
 	local angleSub=math.abs(self.pursuitTarget:getRotation()-self:getRotation())
 
 	if (angleSub>0 and angleSub<20) or (angleSub>180 and angleSub<200) then
-		self:seek(self.pursuitTarget:getPositionX(),self.pursuitTarget:getPositionY())
+		--为了避免速度过大，我们这里乘上阈值
+		self:seek(self.pursuitTarget:getPositionX(),self.pursuitTarget:getPositionY(),self.weightPursuit) 
 		return
 	end
 	-- 预测时间反比于两者速度之和
@@ -102,7 +100,7 @@ function Enemy:pursuit()
 	local preX=self.pursuitTarget:getPositionX()+math.sin(self.pursuitTarget:getRotation())*self.pursuitTarget.speed*predictTime
 	local preY=self.pursuitTarget:getPositionY()+math.cos(self.pursuitTarget:getRotation())*self.pursuitTarget.speed*predictTime
 
-	return self:seek(preX,preY)
+	self:seek(preX,preY,self.weightPursuit)
 end
 
 function Enemy:wander()
@@ -122,9 +120,8 @@ function Enemy:wander()
 	-- 转换到世界坐标系
 	local po_world=self:convertToWorldSpaceAR(cc.p(po_local.x,po_local.y))
 
-	-- print("world_position",po_world.x,po_world.y)
 	-- 向这个点运动
-	return self:seek(po_world.x,po_world.y)
+	self:seek(po_world.x,po_world.y,self.weightWander)
 end
 
 function Enemy:interpose()
@@ -133,19 +130,26 @@ function Enemy:interpose()
 	-- 中点
 	local midPosition=cc.pMul(cc.pAdd(Boss:getPosition(),self.pursuitTarget:getPosition()),0.5)
 
-	return seek(midPosition.x,midPosition.y)
+	seek(midPosition.x,midPosition.y,self.weightInterpose)
 end
 
-function Enemy:seek(pox,poy) -- world space 朝向这个点的运动
+function Enemy:seek(pox,poy,weight) -- world space 朝向这个点的运动
 
 	-- print(pox,poy)
 	local toTarget=cc.p(pox-self:getPositionX(),poy-self:getPositionY())
 
+	-- if cc.pGetLength(toTarget)<0.001 then
+	-- 	return cc.p(0,0)
+	-- end
+
 	local n_toTarget=cc.pNormalize(toTarget)
 
-	local toTarget_unit=cc.pMul(n_toTarget,self.speed)
+	local toTarget_unit=cc.pMul(n_toTarget,self.speed*weight)
 
-	return toTarget_unit
+	self:setPosition(cc.pAdd(cc.p(self:getPositionX(),self:getPositionY()),toTarget_unit))
+
+	self:setRotation(math.atan2((pox-self:getPositionX()),(poy-self:getPositionY()))*180/3.1415926+180)
+	
 end
 
 function Enemy:hide()
@@ -169,7 +173,7 @@ function Enemy:hide()
 	-- 找到目标点
  	local purpose=cc.pAdd(nearestEnemy:getPosition(),plusVec2)
 
-	return seek(purpose)
+	seek(purpose.x,purpose.y,self.weightHide)
 
 end
 
@@ -189,72 +193,29 @@ function Enemy:allUpdate()
 	self._fsm:update()
 end
 
-function Enemy:rotate(pox,poy)
-	self:setRotation(math.atan2(
-		(pox-self:getPositionX()),
-		(poy-self:getPositionY())
-		)*180/3.1415926+180)
-end
-
-function Enemy:hit()
-	if self.t==3 then
-		-- action
-		local frames=display.newFrames("enemy3_n%d.png",1,2)
-		local animation=display.newAnimation(frames,0.2)
-		local animate=cc.Animate:create(animation)
-		local repeatAction=cc.RepeatForever:create(animate)
-		self:runAction(repeatAction)
-	end
-end
-
-function Enemy:accumulateMovement(singleMovement,totalMovement)
-	-- 计算是否在最大速度范围之内能继续运动
-	-- if not enough ,slice it
-	local remindSpeed=self.speed-cc.pGetLength(totalMovement)
-
-	local temp=cc.pAdd(singleMovement,totalMovement)
-	
-	if math.abs(cc.pGetLength(temp)-self.speed)>0.0001 then
-		totalMovement=cc.pAdd(totalMovement,temp)
-	else
-		-- 此处我们将其裁剪
-		totalMovement=cc.pAdd(totalMovement,cc.pMul(cc.pNormalize(temp),remindSpeed))
-	end
-
-	return totalMovement
-end
-
 function Enemy:movementUpdate()
 	-- 此处我们计算所有运动的合运动
-	-- 每个运动有它的阈值和优先级，阈值和优先级高的运动会被先执行
+	-- 每个运动有它的阈值和优先级，阈值和优先级高的运动会被先执行，
+	-- 并且执行时乘以更大的系数
 
 	local totalMovement=cc.p(0,0) -- 合运动
 
 	if self.behaviorTable.onHide then
-		totalMovement=self:accumulateMovement(cc.pMul(self:hide(),self.weightHide),
-			totalMovement)
+		self:hide()
 	end
 
 	if self.behaviorTable.onWander then
-		totalMovement=self:accumulateMovement(cc.pMul(self:wander(),self.weightWander), 
-			totalMovement)
-			print("OUT: ",totalMovement.x)
-
+		self:wander()
 	end
 
 	if self.behaviorTable.onPursuit then
-		totalMovement=self:accumulateMovement(cc.pMul(self:pursuit(),self.weightPursuit), 
-			totalMovement)
+		self:pursuit()
 	end
 
 	if self.behaviorTable.onInterPose then
-		totalMovement=self:accumulateMovement(cc.pMul(self:interpose(),self.weightInterpose), 
-			totalMovement)
+		self:interpose()
 	end
 
-	self:setPosition(cc.p(self:getPositionX()+totalMovement.x,self:getPositionY()+totalMovement.y))
-	-- print(totalMovement.x,totalMovement.y)
-	self:rotate(totalMovement.x,totalMovement.y)
 end
 
 function Enemy:enemyDown()
@@ -272,12 +233,6 @@ function Enemy:enemyDown()
 		self:runAction(callAction)
 		elseif self.t==2 then
 			local frames=display.newFrames("enemy2_down%d.png",1,4)
-			local animation=display.newAnimation(frames,0.2)
-			local animate=cc.Animate:create(animation)
-			local callAction=cc.Sequence:create(animate,call)
-			self:runAction(callAction)
-		else
-			local frames=display.newFrames("enemy3_down%d.png",1,6)
 			local animation=display.newAnimation(frames,0.2)
 			local animate=cc.Animate:create(animation)
 			local callAction=cc.Sequence:create(animate,call)

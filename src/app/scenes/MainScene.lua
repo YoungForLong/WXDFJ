@@ -1,6 +1,7 @@
 local HeroPlane=require("app.entities.HeroPlane")
 local Bullet=require("app.entities.Bullet")
 local Enemy=require("app.entities.Enemy")
+local Boss=require("app.entities.Boss")
 
 -- global containers or refers
 MyScore=0
@@ -12,11 +13,15 @@ enemies={}
 -- bullet arr
 bullets={}
 
+bossBullets={}
+
 local MainScene = class("MainScene", function()
     return display.newScene("MainScene")
 end)
 
 function MainScene:ctor()
+	-- system
+	math.randomseed(os.time())
 	-- index
 	MyScore=0
 	self.la=cc.ui.UILabel.new({
@@ -55,19 +60,26 @@ function MainScene:ctor()
     self.enCount=0
     
     -- update
+
     self:schedule(function()
     	self:myUpdate()
     	self:shoot(1)
     	-- self:shoot(2)
     	-- self:shoot(3)
 
-    	if self.enCount==3 then
+    	self:shouldCreateBoss()
+
+    	if self.bossExiting then
+    		Boss:bossUpdate()
+    	end
+
+    	if self.enCount==2 then
 			self:enemyBorn()
 		end
 
 		self.enCount=self.enCount+1
-		self.enCount=self.enCount%4
-    	end, 0.5)
+		self.enCount=self.enCount%3
+    	end, 0.2)
 
     self:schedule(function()
     	self:bgAutoMove()
@@ -79,11 +91,12 @@ function MainScene:ctor()
 
     -- local closeBtn=
 
+    -- Boss
+    self.bossExiting=false
 
-    -- test
-    -- self.e=Enemy.new(1,100,600)
-    -- self:addChild(self.e,10)
+    self.boss=Boss.new(math.random(0,display.width),display.height-100,self.plane)
 
+    self.timming=0
 
 end
 
@@ -91,8 +104,18 @@ function MainScene:record()
 	
 end
 
+function MainScene:shouldCreateBoss()
+	self.timming=self.timming+1
+	if self.timming>100 then
+		self:addChild(self.boss,10)
+		self.bossExiting=true
+	end
+end
+
 function MainScene:enemyBorn()
-	local e=Enemy.new(1,100,600,self.plane)
+	local randType=math.random(1,2)
+	local randX=math.random(0,display.width)
+	local e=Enemy.new(randType,randX,display.height,self.plane)
 	self:addChild(e,10)
 	table.insert(enemies,e)
 end
@@ -103,10 +126,9 @@ function MainScene:myUpdate()
 end
 
 function MainScene:enemyTraversal()
-	-- print(#enemies)
 	for k,v in pairs(enemies) do
 		v:allUpdate()
-		if v:getPositionX()<-100 or v:getPositionX()>(display.width+100) then
+		if v:getPositionX()<-400 or v:getPositionX()>(display.width+400) then
 			v:removeFromParent()
 			table.remove(enemies,k)
 		end
@@ -230,14 +252,56 @@ function MainScene:shoot(ty)
 	end
 end
 
+function MainScene:bossBulletsTraversal()
+	for k,v in pairs(bossBullets) do
+		v:moveByAngle(270)
+
+		-- 超出场景就移除
+		local positionX=v:getPositionX()
+		local positionY=v:getPositionY()
+
+		local tag=0
+
+		if positionY>(display.height) then
+			tag=tag+1
+		end
+
+		if positionX>(display.width) then
+			tag=tag+1
+		end
+
+		if positionX<0 then
+			tag=tag+1
+		end
+		if tag~=0 then
+			v:removeFromParent()
+			table.remove(bossBullets,k)
+		end
+
+		-- 与飞机做碰撞检测
+
+		if cc.rectIntersectsRect(v:getBoundingBox(),self.plane:getNewBox()) then
+			
+			self.plane.HP=self.plane.HP-1
+
+			if self.plane.HP==0 then
+				self.plane:blowup()
+				self:createFailedLayer()
+			end
+		end
+	end
+end
+
 function MainScene:bulletTraversal()
 	
-	for i,k in pairs(bullets) do
+	for k,v in pairs(bullets) do
 
-		k:move()
+		-- 子弹移动
+		v:move()
 
-		local positionX=k:getPositionX()
-		local positionY=k:getPositionY()
+		-- 子弹是否超出边界
+		local positionX=v:getPositionX()
+		local positionY=v:getPositionY()
 
 		local tag=0
 
@@ -253,10 +317,15 @@ function MainScene:bulletTraversal()
 			tag=tag+1
 		end
 		if tag~=0 then
-			k:removeFromParent()
-			table.remove(bullets,i)
+			v:removeFromParent()
+			table.remove(bullets,k)
 		end
 
+		if self.bossExiting then
+			if cc.rectIntersectsRect(v:getBoundingBox(),Boss:getBoundingBox()) then
+				boss:injur()
+			end
+		end
 	end
 end
 

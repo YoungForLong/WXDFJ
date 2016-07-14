@@ -13,6 +13,13 @@ Normal=State:new()
 -- setmetatable(Normal,State)
 
 function Normal:enter(owner)
+	-- set weights
+	owner.weightWander=0.6
+	owner.weightPursuit=0.4
+	owner.weightInterpose=0
+	owner.weightHide=0
+	
+	-- set behaviors
 	owner:removeAllBehaviors()
 	owner.behaviorTable.onWander=true
 	owner.behaviorTable.onPursuit=true
@@ -35,8 +42,15 @@ end
 
 
 Fear=State:new()
--- setmetatable(Fear, State)
+
 function  Fear:enter(owner)
+	-- set weights
+	owner.weightWander=0.2
+	owner.weightPursuit=0.3
+	owner.weightInterpose=0
+	owner.weightHide=0.5
+
+	-- set behaviors
 	owner:removeAllBehaviors()
 	owner.behaviorTabel.onWander=true
 	owner.behaviorTable.onHide=true
@@ -53,6 +67,13 @@ end
 BossExisting=State:new()
 
 function BossExisting:enter(owner)
+	-- set weights
+	owner.weightWander=0.1
+	owner.weightPursuit=0.3
+	owner.weightInterpose=0.6
+	owner.weightHide=0
+
+	-- set behaviors
 	owner:removeAllBehaviors()
 	owner.behaviorTabel.onWander=true
 	owner.behaviorTable.onPursuit=true

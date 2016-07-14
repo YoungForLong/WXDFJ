@@ -7,8 +7,8 @@ local HeroPlane=class("HeroPlane", function()
 function HeroPlane:ctor()
 	self:setAnchorPoint(0.5,0)
 	self:setPosition(display.cx,0)
-	self.speed=2
-	self.HP=100000
+	self.speed=3
+	self.HP=10
 	-- test
 	-- self:blowup()
 end
@@ -34,8 +34,8 @@ function HeroPlane:move(pox,poy)
 
 	-- local totalAction=cc.Spawn:create(angleRevert,moveAction)
 	self:runAction(moveAction)
-
 end
+
 
 function HeroPlane:getNewBox()
 	local originBox=self:getBoundingBox()
