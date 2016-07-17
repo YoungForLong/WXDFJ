@@ -32,11 +32,11 @@ function FSM:update()
 end
 
 function FSM:handleMsg(msg)
-	if self._currentState and self._currentState:handleMsg(msg) then
+	if self._currentState and self._currentState:handleMsg(self._owner,msg) then
 		return true
 	end
 
-	if self._globalState and self._globalState:handleMsg(msg) then
+	if self._globalState and self._globalState:handleMsg(self._owner,msg) then
 		return true
 	end
 
@@ -46,9 +46,9 @@ end
 function FSM:changeState(next_state)
 	if next_state ~=nil then
 		self._previousState = self._currentState
-		self._currentState:exit(_owner)
+		self._currentState:exit(self._owner)
 		self._currentState = next_state
-		self._currentState:enter(_owner)
+		self._currentState:enter(self._owner)
 	else
 		print("Error: Null State!")
 	end

@@ -8,7 +8,7 @@ function HeroPlane:ctor()
 	self:setAnchorPoint(0.5,0)
 	self:setPosition(display.cx,0)
 	self.speed=3
-	self.HP=10
+	self.HP=20
 	-- test
 	-- self:blowup()
 end
@@ -49,6 +49,8 @@ function HeroPlane:getNewBox()
 end
 
 function HeroPlane:blowup()
+	audio.playMusic("src/hero_down.mp3",false)
+
 	local frames=display.newFrames("hero_blowup_n%d.png",1,4)
 	local animation=display.newAnimation(frames,0.2)
 	local animate=cc.Animate:create(animation)

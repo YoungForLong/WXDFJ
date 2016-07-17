@@ -1,6 +1,8 @@
 -- Ray
 
-local Ray={}
+local Ray={
+	owner=nil
+}
 
 function Ray:new()
 	local p={}
@@ -51,15 +53,15 @@ end
 
 
 function Ray:addAllToParent(parent)
-	parent:addChild(self.mainCircle)
-	parent:addChild(self.mainRect)
+	parent:addChild(self.mainCircle,100)
+	parent:addChild(self.mainRect,100)
 
 	for k,v in pairs(self.circleTable) do
-		parent:addChild(v)
+		parent:addChild(v,100)
 	end
 
 	for k,v in pairs(self.rectTable) do
-		parent:addChild(v)
+		parent:addChild(v,100)
 	end
 
 	self.owner=parent
@@ -88,7 +90,17 @@ function Ray:rayAction()
 	-- 光柱伸长的动画
 
 	local delay=cc.DelayTime:create(2.2)
-	local lengthen=cc.ScaleTo:create(0.4,20,1000)
+	local collisionFunc=cc.CallFunc:create(function()
+		if cc.rectIntersectsRect(self.owner.plane:getBoundingBox(),self.mainRect:getBoundingBox()) then
+			self.owner.plane.HP=self.owner.plane.HP-5
+			print(self.owner.plane.HP)
+			if self.owner.plane.HP<0 then
+				self.owner.plane:blowup()
+				self.owner:createFailedLayer()
+			end
+		end
+	end)
+	local lengthen=cc.Sequence:create(cc.ScaleTo:create(0.4,20,1000),collisionFunc)
 
 	-- 光柱旁边的光线动画
 

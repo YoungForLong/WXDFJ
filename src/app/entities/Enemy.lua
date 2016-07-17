@@ -127,10 +127,12 @@ end
 function Enemy:interpose()
 	-- 由于被保护的目标----boss是运动缓慢的实体，所以此处我们不做运动预测
 
+	local boss=self:getParent().boss
 	-- 中点
-	local midPosition=cc.pMul(cc.pAdd(Boss:getPosition(),self.pursuitTarget:getPosition()),0.5)
+	local midPosition=cc.pMul(cc.pAdd(cc.p(boss:getPositionX(),boss:getPositionY()),
+		cc.p(self.pursuitTarget:getPositionX(),self.pursuitTarget:getPositionY())),0.5)
 
-	seek(midPosition.x,midPosition.y,self.weightInterpose)
+	self:seek(midPosition.x,midPosition.y,self.weightInterpose)
 end
 
 function Enemy:seek(pox,poy,weight) -- world space 朝向这个点的运动
@@ -156,7 +158,8 @@ function Enemy:hide()
 	local nearestEnemy=nil
 	local minDis=1000000
 	for k,v in pairs(enemies) do
-		local dis=cc.pGetDistance(v:getPosition(),self:getPosition())
+		local dis=cc.pGetDistance(cc.p(v:getPositionX(),v:getPositionX()),
+			cc.p(self:getPositionX(),self:getPositionY()))
 		if dis<minDis then
 			nearestEnemy=enemies[k]
 			minDis=dis
@@ -165,15 +168,16 @@ function Enemy:hide()
 	-- 此处由于找到点到直线的投影运算效率太低，此处我们用固定值10
 
 	-- 躲避目标到遮蔽物的向量
-	local friend2target=cc.pSub(self.pursuitTarget:getPosition(),nearestEnemy:getposition())
+	local friend2target=cc.pSub(cc.p(self.pursuitTarget:getPositionX(),self.pursuitTarget:getPositionY()),
+		cc.p(nearestEnemy:getPositionX(),nearestEnemy:getPositionY()))
 
 	-- 将其变为定长
 	local plusVec2=cc.pMul(cc.pNormalize(friend2target),10)
 
 	-- 找到目标点
- 	local purpose=cc.pAdd(nearestEnemy:getPosition(),plusVec2)
+ 	local purpose=cc.pAdd(cc.p(nearestEnemy:getPositionX(),nearestEnemy:getPositionY()),plusVec2)
 
-	seek(purpose.x,purpose.y,self.weightHide)
+	self:seek(purpose.x,purpose.y,self.weightHide)
 
 end
 
@@ -212,15 +216,15 @@ function Enemy:movementUpdate()
 		self:pursuit()
 	end
 
-	if self.behaviorTable.onInterPose then
+	if self.behaviorTable.onInterpose then
 		self:interpose()
 	end
 
 end
 
-function Enemy:enemyDown()
+function Enemy:enemyDown(k)
 	self:stopAllActions()
-
+	table.remove(enemies,k)
 	local call=cc.CallFunc:create(function()
 		self:removeFromParent()
 		end)
@@ -231,14 +235,25 @@ function Enemy:enemyDown()
 		local animate=cc.Animate:create(animation)
 		local callAction=cc.Sequence:create(animate,call)
 		self:runAction(callAction)
+
+		audio.playMusic("enemy1_down.wav", false)
 		elseif self.t==2 then
 			local frames=display.newFrames("enemy2_down%d.png",1,4)
 			local animation=display.newAnimation(frames,0.2)
 			local animate=cc.Animate:create(animation)
 			local callAction=cc.Sequence:create(animate,call)
 			self:runAction(callAction)
+
+			audio.playMusic("src/enemy2_down.wav", false)
 		end
 end
 
+function Enemy:injur(k)
+	self._fsm:handleMsg("on_injured")
+	self.HP=self.HP-1
+	if self.HP<0 then
+		self:enemyDown(k)
+	end
+end
 
 return Enemy

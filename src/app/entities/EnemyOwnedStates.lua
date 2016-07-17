@@ -32,10 +32,10 @@ end
 
 function Normal:handleMsg(owner,msg)
 	if msg=="on_injured" then
-		owner.FSM:changeState(Fear)
+		owner._fsm:changeState(Fear)
 	end
 	if msg=="boss_born" then
-		owner.FSM:changeState(BossExisting)
+		owner._fsm:changeState(BossExisting)
 	end
 end
 
@@ -45,20 +45,20 @@ Fear=State:new()
 
 function  Fear:enter(owner)
 	-- set weights
-	owner.weightWander=0.2
+	owner.weightWander=0.5
 	owner.weightPursuit=0.3
 	owner.weightInterpose=0
-	owner.weightHide=0.5
+	owner.weightHide=0.2
 
 	-- set behaviors
 	owner:removeAllBehaviors()
-	owner.behaviorTabel.onWander=true
+	owner.behaviorTable.onWander=true
 	owner.behaviorTable.onHide=true
 end
 
 function Fear:handleMsg(owner, msg)
 	if msg=="boss_born" then
-		owner.FSM:changeState(BossExisting)
+		owner._fsm:changeState(BossExisting)
 	end
 end
 
@@ -68,20 +68,20 @@ BossExisting=State:new()
 
 function BossExisting:enter(owner)
 	-- set weights
-	owner.weightWander=0.1
+	owner.weightWander=0.4
 	owner.weightPursuit=0.3
-	owner.weightInterpose=0.6
+	owner.weightInterpose=0.3
 	owner.weightHide=0
 
 	-- set behaviors
 	owner:removeAllBehaviors()
-	owner.behaviorTabel.onWander=true
+	owner.behaviorTable.onWander=true
 	owner.behaviorTable.onPursuit=true
 	owner.behaviorTable.onInterpose=true
 end
 
 function BossExisting:handleMsg(owner, msg)
 	if msg=="boss_die" then
-		owner.FSM:changeState(Normal)
+		owner._fsm:changeState(Normal)
 	end
 end

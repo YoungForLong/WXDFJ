@@ -2,6 +2,7 @@ local HeroPlane=require("app.entities.HeroPlane")
 local Bullet=require("app.entities.Bullet")
 local Enemy=require("app.entities.Enemy")
 local Boss=require("app.entities.Boss")
+local DropItem=require("app.entities.DropItem")
 
 -- global containers or refers
 MyScore=0
@@ -58,29 +59,44 @@ function MainScene:ctor()
     self.bulletType=1
 
     self.enCount=0
-    
-    -- update
 
+    self.enCount1=0
+    
+    self.bulletNum=false
+    -- update
     self:schedule(function()
 
     	self:shouldCreateBoss()
 
-    	if self.bossExisting then
-    		self.boss:bossUpdate()
-    	end
-
     	if self.enCount==9 then
     		self:myUpdate()
     		self:shoot(1)
-			self:enemyBorn()
+    		if self.bulletNum then
+    			self:shoot(2)
+    			self:shoot(3)
+    		end
+    		
 		end
+
+
+		if self.boss.isBorn then	
+    		self.boss:bossUpdate()
+    	end
 
 		self.enCount=self.enCount+1
 		self.enCount=self.enCount%10
 
+		if self.enCount1==19 then
+			self:enemyBorn()
+
+			self:shouldCreateItem()
+		end
+
+		self.enCount1=self.enCount1+1
+		self.enCount1=self.enCount1%40
+
     	self:bgAutoMove()
-    	self:bulletTraversal()
-    	self:enemyTraversal()
+    	self:traversal()
     	end,1/global_fps)
 
     -- close btn
@@ -88,24 +104,33 @@ function MainScene:ctor()
     -- local closeBtn=
 
     -- Boss
-    self.bossExisting=false
 
     self.boss=Boss.new(math.random(0,display.width),display.height-100,self.plane)
-
+    self:addChild(self.boss,10)
+    self.boss:setVisible(false)
     self.timming=0
-
 end
 
 function MainScene:record()
-	
+	if MyScore>cc.UserDefault:getInstance():getFloatForKey("Highest") then
+		cc.UserDefault:getInstance():setFloatForKey("Highest",MyScore)
+	end
 end
 
+
+function MainScene:shouldCreateItem()
+	local i=math.random(0,10)
+	if i==1 then
+		local item=DropItem.new(self)
+	end
+end
 function MainScene:shouldCreateBoss()
 	self.timming=self.timming+1
-	if self.timming>100  then
-		if self.bossExisting==false then
-			self:addChild(self.boss,10)
-			self.bossExisting=true
+	if self.timming>1000 then
+		if self.boss.isBorn == false then
+			self.timming=-100000
+			self.boss.isBorn=true
+			self.boss:setVisible(true)
 		end
 	end
 end
@@ -119,55 +144,76 @@ function MainScene:enemyBorn()
 end
 
 function MainScene:myUpdate()
+
 	self.la:setString("score: "..MyScore)
 
 end
 
-function MainScene:enemyTraversal()
-	for k,v in pairs(enemies) do
-		v:allUpdate()
-		if v:getPositionX()<-400 or v:getPositionX()>(display.width+400) then
-			v:removeFromParent()
-			table.remove(enemies,k)
-		end
-	end
+function MainScene:traversal()
 
-	for i=#enemies,1,-1 do
-		for j=#bullets,1,-1 do
-			if cc.rectIntersectsRect(enemies[i]:getBoundingBox(),bullets[j]:getBoundingBox()) then
-				
-				enemies[i].HP=enemies[i].HP-1
-				-- 被攻击到了后会进入Fear状态
-				enemies[i]:handleMsg("on_injured")
+	-- 遍历子弹
+	for k,v in pairs(bullets) do
+		while true do
 
-				if enemies[i].HP==0 then
-					enemies[i]:enemyDown()
-					table.remove(enemies,i)
+			-- 移动
+			if v then
+				v:move()
+			end
+
+			-- 是否和敌机碰撞
+			local isCollision=false
+			for kk,vv in pairs(enemies) do
+				if cc.rectIntersectsRect(vv:getBoundingBox(),v:getBoundingBox()) then
+					vv:injur(kk) --自带了移除的函数
+					isCollision=true
+					break
 				end
+			end
+			if isCollision==true then
 				MyScore=MyScore+1
-
-				bullets[j]:removeFromParent()
-				table.remove(bullets,j)
-
+				v:removeFromParent()
+				table.remove(bullets,k) 
 				break
 			end
-		end
+
+			-- 是否超出便边界
+			local pox=v:getPositionX()
+			local poy=v:getPositionY()
+
+			if pox<0 or pox>display.width or poy<0 or poy>display.height then
+				v:removeFromParent()
+				table.remove(bullets,k)
+				break
+			end
+			break
+		end		
 	end
 
+	-- 遍历敌机
 	for k,v in pairs(enemies) do
-
-		if cc.rectIntersectsRect(v:getBoundingBox(),self.plane:getNewBox()) then
-
-			self.plane.HP=self.plane.HP-1
-
-			v:enemyDown()
-
-			if self.plane.HP==0 then
-				self.plane:blowup()
-				self:createFailedLayer()
+		-- 用while break来模拟continue
+		while true do
+			-- 自动更新
+			v:allUpdate()
+			-- 判断是否超出边界
+			if v:getPositionX()<-400 or v:getPositionX()>(display.width+400) then
+				v:removeFromParent()
+				table.remove(enemies,k)
+				break
 			end
+			-- 是否和hero碰撞
+			if cc.rectIntersectsRect(v:getBoundingBox(),self.plane:getNewBox()) then
 
-			table.remove(enemies,k)
+				self.plane.HP=self.plane.HP-1
+				self.bulletNum=false
+				v:enemyDown(k)
+
+				if self.plane.HP<0 then
+					self.plane:blowup()
+					self:createFailedLayer()
+				end
+			end
+			break
 		end
 	end
 end
@@ -214,12 +260,48 @@ function MainScene:createFailedLayer()
 		color=cc.c4f(242,172,4,255)
 		})
 	lab:setAnchorPoint(0,0)
-	lab:setPosition(240,280)
+	lab:setPosition(260,285)
 	failedLayer:addChild(lab, 2)
 
 
 	failedLayer:addChild(ULOSE_sp,2)
 end
+
+function MainScene:createWinLayer()
+	self:pause()
+	self.bgLayer:setTouchEnabled(false)
+
+	local failedLayer=display.newColorLayer(cc.c4f(0, 0, 0, 200))
+
+	local drawNode=cc.DrawNode:create()
+	drawNode:drawPolygon({
+		cc.p(display.cx-220,display.cy-200),
+		cc.p(display.cx+220,display.cy-200),
+		cc.p(display.cx+220,display.cy+100),
+		cc.p(display.cx-220,display.cy+100)
+		})
+
+	failedLayer:addChild(drawNode, 1)
+
+	self:addChild(failedLayer,1000)
+
+	local ULOSE_sp=display.newSprite("win.png")
+	ULOSE_sp:setAnchorPoint(0.5,0.5)
+	ULOSE_sp:setPosition(display.cx,display.cy-40)
+
+	local lab=cc.ui.UILabel.new({
+		text=MyScore,
+		size=60,
+		color=cc.c4f(242,172,4,255)
+		})
+	lab:setAnchorPoint(0,0)
+	lab:setPosition(260,285)
+	failedLayer:addChild(lab, 2)
+
+
+	failedLayer:addChild(ULOSE_sp,2)
+end
+
 
 function MainScene:onLayerClicked()
 	self.bgLayer:setTouchEnabled(true)
@@ -235,6 +317,7 @@ function MainScene:onLayerClicked()
 end
 
 function MainScene:shoot(ty)
+	audio.playMusic("sound/shoot.wav", false)
 
 	if self.bulletType==1 then
 		local filepath="#bullet1.png"
@@ -249,89 +332,6 @@ function MainScene:shoot(ty)
 		table.insert(bullets,bullet)
 	end
 end
-
-function MainScene:bossBulletsTraversal()
-	for k,v in pairs(bossBullets) do
-		v:moveByAngle(270)
-
-		-- 超出场景就移除
-		local positionX=v:getPositionX()
-		local positionY=v:getPositionY()
-
-		local tag=0
-
-		if positionY>(display.height) then
-			tag=tag+1
-		end
-
-		if positionX>(display.width) then
-			tag=tag+1
-		end
-
-		if positionX<0 then
-			tag=tag+1
-		end
-		if tag~=0 then
-			v:removeFromParent()
-			table.remove(bossBullets,k)
-		end
-
-		-- 与飞机做碰撞检测
-
-		if cc.rectIntersectsRect(v:getBoundingBox(),self.plane:getNewBox()) then
-			
-			self.plane.HP=self.plane.HP-1
-
-			if self.plane.HP==0 then
-				self.plane:blowup()
-				self:createFailedLayer()
-			end
-		end
-	end
-end
-
-function MainScene:bulletTraversal()
-	
-	for i=#bullets,1,-1  do
-
-		-- 子弹移动
-		bullets[i]:move()
-
-		--是否打击到boss
-		-- local temp=self.bossExisting and cc.rectIntersectsRect(bullets[i]:getBoundingBox(),self.boss:getBoundingBox())
-		-- print(temp)
-		-- if temp then
-		-- 	self.boss:injur()
-		-- 	bullets[i]:removeFromParent()
-		-- 	table.remove(bullets,bullets[i])
-		-- 	break
-		-- end
-
-		-- 子弹是否超出边界
-		local positionX=bullets[i]:getPositionX()
-		local positionY=bullets[i]:getPositionY()
-
-		local tag=0
-
-		if positionY>(2*display.cy) then
-			tag=tag+1
-		end
-
-		if positionX>(2*display.cx) then
-			tag=tag+1
-		end
-
-		if positionX<0 then
-			tag=tag+1
-		end
-		if tag~=0 then
-			bullets[i]:removeFromParent()
-			table.remove(bullets,k)
-		end
-	end
-end
-
-
 
 function MainScene:onEnter()
 end
